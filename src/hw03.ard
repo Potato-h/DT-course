@@ -54,24 +54,6 @@
         a + c + (b + d) `qed
     }
 
-\func zero-mul-is-zero {n : Nat} : 0 * n = 0 \elim n
-  | 0 => idp
-  | suc n => zero-mul-is-zero
-
-\func *-comm (n m : Nat) : n * m = m * n \elim n, m
-  | 0, 0 => idp
-  | 0, suc m => zero-mul-is-zero
-  | suc n, 0 => sym' zero-mul-is-zero
-  | suc n, suc m => pmap' suc $
-    suc n * m + n   ==< later (rewrite (*-comm (suc n) m) idp) >==
-    m * n + m + n   ==< later (rewrite (+-assoc (m * n) m n) idp) >==
-    m * n + (m + n) ==< later (rewrite (*-comm m n) idp) >== -- TODO: There is a problem
-    n * m + (m + n) ==< later (rewrite (+-comm m n) idp) >==
-    n * m + (n + m) ==< later (rewriteI (+-assoc (n * m) n m) idp) >==
-    n * m + n + m   ==< idp >==
-    n * suc m + m   ==< later (rewrite (*-comm n (suc m)) idp) >==
-    suc m * n + m   `qed
-
 \func ldistr (n m k : Nat) : n * (m + k) = n * m + n * k \elim k
   | 0 => idp
   | suc k =>
