@@ -62,15 +62,13 @@
 --    Высота листа равна 0.
 
 \data Tree (A : \Type) (n : Nat) \elim n
-  | suc n => {
-    | Leaf
-    | Node A (Tree A n) (Tree A n)
-  }
+  | n => Leaf
+  | suc n => Node A (Tree A n) (Tree A n)
 
 -- определите функцию, возвращающую высоту дерева.
 
 \func height {A : \Type} (n : Nat) (t : Tree A n) : Fin (suc n) \elim n, t
-  | suc n, Leaf => fzero
+  | _, Leaf => fzero
   | suc n, Node a t1 t2 => fsuc $ max (height n t1) (height n t2)
   \where {
     \func max {n : Nat} (k1 k2 : Fin n) : Fin n \elim n, k1, k2
