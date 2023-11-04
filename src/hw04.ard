@@ -137,7 +137,9 @@
     \in cons row block
 
 -- 9. Определите факториал через Nat-rec.
-\func factorial : Nat -> Nat => Nat-rec Nat 1 (Nat.*)
+\func factorial : Nat -> Nat => Nat-rec Nat 1 (\lam n acc => suc n Nat.* acc)
+
+\func factoral-test1 : factorial 6 = 720 => idp
 
 -- 10. Докажите ассоциативность сложения для натуральных чисел через Nat-elim.
 \func +-assoc (n m k : Nat) : (n + m) + k = n + (m + k) =>
