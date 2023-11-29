@@ -25,7 +25,7 @@
 \data ReflTransClosure {A : \Type} (R : A -> A -> \Type) (x y : A)
   | reflc (x = y)
   | inhibit (R x y)
-  | transc (z : A) (R x z) (R z y)
+  | transc (z : A) (R x z) (ReflTransClosure R z y)
 
 -- 4. Докажите, что если R уже рекфлексивно и транзитивно, то ReflTransClosure R эквивалентно R.
 
@@ -33,11 +33,16 @@
 
 \func ReflTransClosure-lem {A : \Type} (R : A -> A -> \Type) (refl : \Pi (x : A) -> R x x) (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
   : \Pi (x y : A) -> R x y <-> ReflTransClosure R x y
-  => \lam x y => (inhibit, \lam r => \case r \with {
-    | reflc p => rewrite p (refl y)
-    | inhibit r1 => r1
-    | transc z r1 r2 => trans x z y r1 r2
-  })
+  => \lam x y => (inhibit, \lam r => aux R refl trans x y r)
+  \where {
+    \func aux {A : \Type} (R : A -> A -> \Type)
+              (refl : \Pi (x : A) -> R x x) (trans : \Pi (x y z : A) -> R x y -> R y z -> R x z)
+              (x y : A) (r : ReflTransClosure R x y)
+      : R x y \elim r
+      | reflc p => rewrite p (refl y)
+      | inhibit r => r
+      | transc z r r1 => trans x z y r (aux R refl trans z y r1)
+  }
 
 -- 5. Определите предикат Sublist xs ys на списках, означающий "список xs является подсписком ys".
 \data Sublist {A : \Type} (xs ys : List A) \with
