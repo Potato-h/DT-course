@@ -1,24 +1,107 @@
+\import Algebra.Domain.Euclidean
+\import Algebra.Meta
+\import Algebra.Monoid (CMonoid)
+\import Arith.Nat
 \import Data.Bool
-\import Data.List \hiding (headDef)
+\import Data.List
+\import Data.Or
+\import Function.Meta
+\import Logic.Meta
+\import Meta
+\import Order.StrictOrder
+\import Paths
+\import Paths.Meta
+\import hw01 (fac)
 \import hw06
+\import hw07
+\import lect04 (sym)
+\import lect06 (filter)
 \import lect08
 \import Order.LinearOrder
 \open LinearOrder
+\open Nat(+, *)
 
 -- 1. Реализуйте функцию filter и докажите ее корректность, то есть, что выполнены следующие условия:
 --    * filter p xs является подсписком xs
 --    * Все элементы filter p xs удовлетворяют предикату p
 --    * Любой подсписок xs с тем же свойством является подсписком filter p xs
+\func filter-Sublist {A : \Type} (p : A -> Bool) (xs : List A) : Sublist (filter p xs) xs => filter-is-sublist p xs
+
+\func Filtered {A : \Type} (p : A -> Bool) (xs : List A) : \Type => \Pi (x : A) (In x xs) -> p x = true
+
+\func filter-is-filtred {A : \Type} (p : A -> Bool) (xs : List A) : Filtered p (filter p xs) => {?}
+
+\func filtered-is-sub {A : \Type} (p : A -> Bool) (xs : List A)
+                      (sub : List A) (prf : Filtered p sub) (prf2 : Sublist sub xs)
+  : Sublist sub (filter p xs)
+  => {?}
+
 
 -- 2. Докажите, что Perm l1 l2 тогда и только тогда, когда Insertion.sort l1 = Insertion.sort l2.
+\func perm-decided-by-order {A : Dec} (l1 l2 : List A) : Perm l1 l2 <-> (Insertion.sort l1 = Insertion.sort l2) =>
+  (perm-decided-by-order-right l1 l2, perm-decided-by-order-left l1 l2)
+\where {
+  \func perm-decided-by-order-right {A : Dec} (l1 l2 : List A) (p : Perm l1 l2) : Insertion.sort l1 = Insertion.sort l2 \elim l1, l2, p
+    | nil, nil, perm-nil => idp
+    | x :: l1, y :: l2, perm-cons p p1 => rewrite (p, perm-decided-by-order-right _ _ p1) idp
+    | l1, l2, perm-trans {zs} p1 p2 => perm-decided-by-order-right l1 zs p1 *> perm-decided-by-order-right zs l2 p2
+    | x :: (x' :: l1), y :: (y' :: l2), perm-swap p p1 p2 => rewrite (Insertion.sort-perm.insert-comm, p, p1, p2) idp
+
+  \func perm-sym {A : \Type} (l1 l2 : List A) (p : Perm l1 l2) : Perm l2 l1 \elim l1, l2, p
+    | nil, nil, perm-nil => perm-nil
+    | x :: l3, y :: l4, perm-cons p p1 => perm-cons (sym p) (perm-sym _ _ p1)
+    | l3, l4, perm-trans p1 p2 => perm-trans (perm-sym _ _ p2) (perm-sym _ _ p1)
+    | x :: (x' :: l3), y :: (y' :: l4), perm-swap p p1 p2 => perm-swap (sym p1) (sym p) (sym p2)
+
+  \func perm-decided-by-order-left {A : Dec} (l1 l2 : List A) (p : Insertion.sort l1 = Insertion.sort l2) : Perm l1 l2 => \let
+    | p1 => rewrite p (Insertion.sort-perm l1)
+    | p2 => Insertion.sort-perm l2
+    \in perm-trans p1 (perm-sym _ _ p2)
+}
+
+\func sort-of-sorted-is-neutral {A : Dec} (l : List A) (p : Sorted l) : l = Insertion.sort l \elim l, p
+  | nil, sorted-nil => idp
+  | x :: l, sorted-cons x<head p => rewriteI (sort-of-sorted-is-neutral l p) $ insert-least l x x<head
+\where {
+  \func insert-least {A : Dec} (l : List A) (x : A) (p : x <= headDef x l) : x :: l = Insertion.sort.insert x l \elim l
+    | nil => idp
+    | a :: l => mcases \with {
+      | inl x<a => contradiction
+      | inr a<=x => idp
+    }
+}
 
 -- 3. Докажите, что спецификация "результат является перестановкой входа и отсортирован" является полной для функции sort.
 
 \func completeness {A : Dec} (sort : List A -> List A) (l : List A) (p : Perm l (sort l)) (s : Sorted (sort l)) : sort l = Insertion.sort l
-  => {?}
+  => \let
+    | insert-sort-is-insert-sort-sort-l => perm-decided-by-order.perm-decided-by-order-right l (sort l) p
+    \in rewrite (sort-of-sorted-is-neutral _ s) (sym insert-sort-is-insert-sort-sort-l)
 
 -- 4. Определите факториал через хвостовую рекурсию.
 --    Докажите, что он равен обычному определению факториала.
+
+\func fact (n : Nat) : Nat => aux n 1
+  \where {
+    \func aux (n acc : Nat) : Nat \elim n
+      | 0 => acc
+      | suc n => aux n (suc n * acc)
+
+    \func aux-lem (n acc k : Nat) : aux n (k * acc) = k * aux n acc \elim n
+      | 0 => idp
+      | suc n =>
+        aux n (suc n * (k * acc)) ==< later (rewrite (aux-lem _ _ _) idp) >==
+        suc n * aux n (k * acc) ==< later (rewrite (aux-lem _ _ _) idp) >==
+        suc n * (k * aux n acc) ==< assoc-lem (suc n) k (aux n acc) >==
+        k * (suc n * aux n acc) ==< later (rewrite (aux-lem _ _ _) idp) >==
+        k * aux n (suc n * acc) `qed
+
+    \func assoc-lem {N : CMonoid} (n m k : N.E) : n N.* (m N.* k) = m N.* (n N.* k) => equation
+  }
+
+\func fact-is-fac (n : Nat) : fact n = fac n \elim n
+  | 0 => idp
+  | suc n => rewriteI (fact-is-fac n, fact.aux-lem _ _ _) idp
 
 -- 5. Определите функцию, которая проверяет правильность скобочной последовательности.
 --    Докажите ее корректность.
@@ -26,7 +109,66 @@
 \data Paren | Left | Right
 
 \func isBalanced (xs : List Paren) : Bool
-  => {?}
+  => go xs 0
+  \where {
+    \func go (xs : List Paren) (acc : Nat) : Bool
+      | nil, 0 => true
+      | nil, suc acc => false
+      | Left :: xs, acc => go xs (suc acc)
+      | Right :: xs, 0 => false
+      | Right :: xs, suc acc => go xs acc
+
+    \func balance-append (xs ys : List Paren)
+                         (p1 : isBalanced xs = true)
+                         (p2 : isBalanced ys = true)
+      : isBalanced (xs ++ ys) = true => aux xs ys 0 p1 p2
+      \where {
+        \func aux (xs ys : List Paren) (acc : Nat)
+                  (p1 : go xs acc = true)
+                  (p2 : isBalanced ys = true)
+          : go (xs ++ ys) acc = true \elim xs, acc, p1
+          | nil, 0, p3 => p2
+          | Right :: xs, 0, p3 => p3
+          | Left :: xs, acc, p3 => aux _ _ _ p3 p2
+          | Right :: xs, suc acc, p3 => aux _ _ _ p3 p2
+      }
+
+    \func balance-cons  (xs : List Paren)
+                        (p : isBalanced xs = true)
+      : isBalanced (Left :: xs ++ Right :: nil) = true => aux xs 0 p
+      \where {
+        \func aux (xs : List Paren) (acc : Nat)
+                  (p : go xs acc = true)
+          : go (xs ++ Right :: nil) (suc acc) = true \elim xs, acc, p
+          | nil, 0, p1 => idp
+          | Right :: xs, 0, p1 => \case p1
+          | Left :: xs, acc, p1 => aux xs _ p1
+          | Right :: xs, suc acc, p1 => aux xs _ p1
+      }
+  }
+
+\func split (xs : List Paren) (p : isBalanced (Left :: xs) = true)
+  : \Sigma (ys : List Paren) (zs : List Paren)
+           (xs = ys ++ Right :: zs)
+           (isBalanced ys = true)
+           (isBalanced zs = true)
+  => aux xs 0 p
+\where {
+  \func aux (xs : List Paren) (acc : Nat)
+              (p : isBalanced.go xs (suc acc) = true)
+    : \Sigma (ys : List Paren) (zs : List Paren)
+             (xs = ys ++ Right :: zs)
+             (isBalanced.go ys acc = true)
+             (isBalanced zs = true)
+    | nil, 0, ()
+    | Right :: xs, 0, p => (nil, xs, idp, idp, p)
+    | Left :: xs, acc, p => \let
+      | (a, b, c, d, e) => aux xs (suc acc) p
+      \in rewrite c (Left :: a, b, idp, d, e)
+    | Right :: xs, suc acc, p => \let
+      | (a, b, c, d, e) => aux xs acc p
+      \in rewrite c (Right :: a, b, idp, d, e)
+}
 
 \data Balanced (xs : List Paren) \with
   | nil => nil-balanced
@@ -34,4 +176,54 @@
   | xs => append-balanced {ys zs : List Paren} (Balanced ys) (Balanced zs) (xs = ys ++ zs)
 
 \func isBalanced-correct (xs : List Paren) : (isBalanced xs = true) <-> Balanced xs
-  => {?}
+  => (\lam p => isBalanced-correct-right xs (suc (length xs)) linarith p, isBalanced-correct-left xs)
+  \where {
+
+--    Will not work, because spliting decreasing length of list, but it's not structural
+--    \func isBalanced-correct-right (xs : List Paren) (p : isBalanced xs = true) : Balanced xs \elim xs
+--      | nil => nil-balanced
+--      | Left :: xs => \let
+--        | (ys, zs, p1, p2, p3) => split xs p
+--        | balanced-ys => isBalanced-correct-right ys p2
+--        | balanced-ys-cons => cons-balanced {ys ++ Right :: nil} balanced-ys idp
+--        | balanced-zs => isBalanced-correct-right zs p3
+--        \in rewrite p1 (append-balanced {_} {Left :: ys ++ Right :: nil} {zs} balanced-ys-cons balanced-zs equation)
+--      | Right :: xs => contradiction
+
+    \func sublist-is-less-left {A : \Type} (xs ys zs : List A) (a : A) (p : xs = ys ++ a :: zs) : length ys < length xs \elim xs, ys, p
+      | nil, nil, ()
+      | a1 :: xs1, nil, p => NatSemiring.zero<suc
+      | a1 :: xs1, a2 :: ys, p => NatSemiring.suc<suc (sublist-is-less-left xs1 ys zs a (pmap tail p))
+
+    \func sublist-is-less-right {A : \Type} (xs ys zs : List A) (a : A) (p : xs = ys ++ a :: zs) : length zs < length xs \elim xs, ys, p
+      | nil, nil, ()
+      | a1 :: xs1, nil, p => rewrite (pmap tail p) linarith
+      | a1 :: xs1, a2 :: ys, p => \let
+        | rec => sublist-is-less-right xs1 ys zs a (pmap tail p)
+        \in linarith
+
+    \func isBalanced-correct-right (xs : List Paren)
+                                   (fuel : Nat) (term : length xs < fuel)
+                                   (p : isBalanced xs = true)
+      : Balanced xs \elim xs, fuel, term
+      | nil, suc fuel, term => nil-balanced
+      | Left :: xs, suc fuel, term => \let
+        | (ys, zs, p1, p2, p3) => split xs p
+        | length-y<length-x => sublist-is-less-left xs ys zs _ p1
+        | balanced-ys => isBalanced-correct-right ys fuel linarith p2
+        | balanced-ys-cons => cons-balanced {ys ++ Right :: nil} balanced-ys idp
+        | length-z<length-x => sublist-is-less-right xs ys zs _ p1
+        | balanced-zs => isBalanced-correct-right zs fuel linarith p3
+          \in rewrite p1 (append-balanced {_} {Left :: ys ++ Right :: nil} {zs} balanced-ys-cons balanced-zs equation)
+      | Right :: xs, suc fuel, term => contradiction
+
+    \func isBalanced-correct-left (xs : List Paren) (p : Balanced xs) : isBalanced xs = true \elim xs, p
+      | nil, nil-balanced => idp
+      | Left :: xs, cons-balanced {ys} ys-balanced xs=ys++right => rewrite xs=ys++right $ \let
+        | ys-balanced' => isBalanced-correct-left ys ys-balanced
+        \in isBalanced.balance-cons ys ys-balanced'
+      | xs1, append-balanced {ys} {zs} p1 p2 p3 => rewrite p3 $ \let
+        | ys-balanced => isBalanced-correct-left ys p1
+        | zs-balanced => isBalanced-correct-left zs p2
+        \in isBalanced.balance-append ys zs ys-balanced zs-balanced
+  }
