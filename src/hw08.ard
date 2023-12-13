@@ -29,13 +29,27 @@
 
 \func Filtered {A : \Type} (p : A -> Bool) (xs : List A) : \Type => \Pi (x : A) (In x xs) -> p x = true
 
-\func filter-is-filtred {A : \Type} (p : A -> Bool) (xs : List A) : Filtered p (filter p xs) => {?}
+\func filter-is-filtred {A : \Type} (p : A -> Bool) (xs : List A) : Filtered p (filter p xs) \elim xs
+  | nil => \lam x i => \case i
+  | a :: xs => cases (p a arg addPath) \with {
+    | false, _ => filter-is-filtred p xs
+    | true, p1 => \lam x i => \case \elim i \with {
+      | Here p2 => rewrite (p2, p1) idp
+      | There i => (filter-is-filtred p xs) x i
+    }
+  }
 
 \func filtered-is-sub {A : \Type} (p : A -> Bool) (xs : List A)
-                      (sub : List A) (prf : Filtered p sub) (prf2 : Sublist sub xs)
+                      (sub : List A) (sub-filtered : Filtered p sub) (sub-is-sub : Sublist sub xs)
   : Sublist sub (filter p xs)
-  => {?}
-
+  | p, xs, nil, sub-filtered, nil-is-sub => nil-is-sub
+  | p, y :: xs, x :: sub, sub-filtered, cons p1 sub-is-sub =>
+    rewrite (inv p1, sub-filtered x (Here idp)) $
+      cons idp (filtered-is-sub p xs sub (\lam x1 i => sub-filtered x1 (There i)) sub-is-sub)
+  | p, y :: xs, sub, sub-filtered, cons-right sub-is-sub => mcases \with {
+    | true => cons-right (filtered-is-sub p xs sub sub-filtered sub-is-sub)
+    | false => filtered-is-sub p xs sub sub-filtered sub-is-sub
+  }
 
 -- 2. Докажите, что Perm l1 l2 тогда и только тогда, когда Insertion.sort l1 = Insertion.sort l2.
 \func perm-decided-by-order {A : Dec} (l1 l2 : List A) : Perm l1 l2 <-> (Insertion.sort l1 = Insertion.sort l2) =>
