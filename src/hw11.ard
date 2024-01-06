@@ -1,14 +1,31 @@
 \import Data.Bool
+\import Equiv
 \import Logic (<->)
+\import Paths.Meta
+\import lect10 (setLem)
 \import lect11
 
 -- 1. Докажите, что если A : \Prop, то Trunc A эквивалентен A.
 
-\func trunc-prop {A : \Prop} : Trunc A <-> A => {?}
+\func trunc-prop {A : \Prop} : Trunc A <-> A => (
+  \lam t => \case \elim t \with {
+    | trunc a => a
+    },
+  \lam a => trunc a
+)
 
 -- 2. Докажите следующий закон де Моргана.
 
-\func deMorgan (A B C : \Prop) : (\Sigma A (B `Or` C)) <-> ((\Sigma A B) `Or` (\Sigma A C)) => {?}
+\func deMorgan (A B C : \Prop) : (\Sigma A (B `Or` C)) <-> ((\Sigma A B) `Or` (\Sigma A C)) => (
+  \lam p => \case \elim p \with {
+    | (a,inl b) => inl (a, b)
+    | (a,inr c) => inr (a, c)
+  },
+  \lam o => \case \elim o \with {
+    | inl (a, b) => (a, inl b)
+    | inr (a, c) => (a, inr c)
+  }
+)
 
 -- 3. Определите элиминатор для Or через Or-rec, не используя паттерн матчинг на Or.
 
@@ -18,7 +35,11 @@
 
 -- 4. Докажите, что тип утверждений является множеством.
 
-\func prop-isSet : isSet \Prop => {?}
+\func prop-isSet : isSet \Prop => setLem
+    (\lam P1 P2 => Equiv {P1} {P2})
+    (\lam x y => pathInProp)
+    (\lam a => equality=>equivalence idp)
+    (\lam {a} {a'} e => equivalence=>equality e)
 
 -- 5. Докажите, что функции Prop1-to-Prop2 и Prop2-to-Prop1 взаимно обратны и, как следствие, что Prop1 = Prop2.
 
@@ -44,6 +65,12 @@
 -- Можно сделать только одно из упражнений 7a,7b на выбор.
 -- 7a. Докажите, что (Bool = Bool) = Bool.
 
-\func BoolAut : (Bool = Bool) = Bool => {?}
+\func BoolAut : (Bool = Bool) = Bool => equivalence=>equality (\new Equiv {
+  | f => {?}
+  | ret => {?}
+  | ret_f => {?}
+  | sec => {?}
+  | f_sec => {?}
+})
 
 -- 7b. Докажите, что (n+m)-элементное множество равно размеченному объединению n- и m-элементных множеств.

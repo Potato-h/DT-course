@@ -1,15 +1,30 @@
 \import Logic
+\import Meta
+\import Paths
+\import Paths.Meta
+\import hw06 (suc/=zero)
 \import lect12
 
 -- 1. Определите функцию negPred : Int -> Int такую, что negPred x = x, если x > 0, и negPred x = x - 1, если x <= 0.
 
-\func negPred (x : Int) : Int => {?}
+\func negPred (x : Int) : Int \elim x
+  | pos 0 => neg 1
+  | pos (suc n) => pos (suc n)
+  | neg n => neg (suc n)
 
 -- 2. Определите функции сложения и умножения для Int.
 
-\func \infixl 6 + (x y : Int) : Int => {?}
+\func \infixl 6 + (x y : Int) : Int \elim x, y
+  | pos n1, pos n2 => pos (n1 Nat.+ n2)
+  | pos n1, neg (suc n2) => pos n1 + neg n2
+  | neg (suc n1), pos n2 => neg n1 + pos n2
+  | neg (suc n1), neg (suc n2) => neg (suc n1 Nat.+ suc n2)
 
-\func \infixl 7 * (x y : Int) : Int => {?}
+\func \infixl 7 * (x y : Int) : Int \elim x, y
+  | pos n1, pos n2 => pos (n1 Nat.* n2)
+  | pos n1, neg n2 => neg (n1 Nat.* n2)
+  | neg (suc n1), pos n2 => neg (suc n1 Nat.* n2)
+  | neg (suc n1), neg (suc n2) => pos (suc n1 Nat.* suc n2)
 
 -- 3. Определите тип данных BinNat для бинарных натуральных чисел.
 --    У него должно быть три конструктора: для 0, для чисел вида 2*n и чисел вида 2*n+1.
@@ -17,6 +32,13 @@
 --    Используйте типы данных с условиями, чтобы вычислительно отождествить различные нули.
 
 \data BinNat
+  | zero
+  | doub BinNat \with {
+    | zero => zero
+  }
+  | doub+1 BinNat
+
+\func bin-test : zero = doub (doub (doub zero)) => idp
 
 -- 4. Докажите, что функция pred сюръективна.
 
@@ -24,11 +46,13 @@
   | 0 => 0
   | suc n => n
 
-\func pred-is-sur : isSur pred => {?}
+\func pred-is-sur : isSur pred => \lam b => inP (suc b, idp)
 
 -- 5. Докажите, что функция suc не сюръективна.
 
-\func suc-is-not-sur (p : isSur suc) : Empty => {?}
+\func suc-is-not-sur (p : isSur suc) : Empty => \case (p 0) \with {
+  | inP (a, p') => suc/=zero p'
+}
 
 -- 6. Пусть f : A -> B и g : B -> C ─ некоторые функции.
 --    Докажите, что если f и g сюръективны, то g `o` f также сюръективна.
@@ -36,9 +60,17 @@
 
 \func \fixr 9 o {A B C : \Type} (g : B -> C) (f : A -> B) => \lam a => g (f a)
 
-\func o-sur {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur f) (q : isSur g) : isSur (g `o` f) => {?}
+\func o-sur {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur f) (q : isSur g) : isSur (g `o` f)
+  => \lam c => \case (q c) \with {
+    | inP (b, gb=c) => \case (p b) \with {
+      | inP (a, fa=b) => inP (a, unfold o (rewrite (fa=b, gb=c) idp))
+    }
+  }
 
-\func o-sur' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur (g `o` f)) : isSur g => {?}
+\func o-sur' {A B C : \Type} (f : A -> B) (g : B -> C) (p : isSur (g `o` f)) : isSur g
+  => \lam c => \case (p c) \with {
+    | inP (a, prf) => inP (f a, prf)
+  }
 
 -- 7. Определите множество конечных подмножеств множества A, то есть списков элементов A с точностью до перестановок и повторений элементов.
 
@@ -56,7 +88,7 @@
 -- "существует инъекция из A в Subs A" и "не существует сюръекции из A в Subs A".
 
 \func cantor1 (A : \Set) : \Sigma (f : A -> Subs A) (isInj f)
-  => {?}
+  => (\lam a a' => a = a', \lam x y p => \let | eq-eq => pmap (\lam eq => eq y) p \in rewrite eq-eq idp)
 
 \func cantor2 (A : \Set) (f : A -> Subs A) (p : isSur f) : Empty
   => {?}

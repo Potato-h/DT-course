@@ -1,19 +1,48 @@
 \import Data.Bool
+\import Data.List
+\import Function.Meta
+\import Logic
+\import Paths.Meta
 \import lect12(isInj)
 \import lect13
 
 -- 1. Докажите, что add x (add x s) = add x s и add x (add y s) = add y (add x s)
 
 \func add-idemp {S : SetSpec} (x : S.A) (s : S) : add x (add x s) = add x s
-  => {?}
+  => setExt $ \lam a => (
+    \lam el => \case (add-univ el) \with {
+      | byLeft p => rewrite p add-head
+      | byRight p => p
+    },
+    \lam el => add-tail el
+  )
 
 \func add-swap {S : SetSpec} (x y : S.A) (s : S) : add x (add y s) = add y (add x s)
-  => {?}
+  => setExt $ \lam a => (add-swap-lemma, add-swap-lemma)
+  \where {
+    \func add-swap-lemma {S : SetSpec} {a : S.A} {x y : S.A} {s : S.S} : S.isElem a (S.add x (S.add y s)) -> S.isElem a (S.add y (S.add x s)) =>
+      \lam el => \case (add-univ el) \with {
+        | byLeft p => rewrite p $ add-tail add-head
+        | byRight p => \case (add-univ p) \with {
+          | byLeft a=y => rewrite a=y add-head
+          | byRight a-elem-s => add-tail $ add-tail a-elem-s
+        }
+      }
+  }
 
 -- 2. Докажите, что множество подмножеств является инстансом SetSpec
 
 \func subsets {A : \Set} : SetSpec {A} (A -> \Prop)
-  => {?}
+  => \new SetSpec {
+    | empty => \lam a => Empty
+    | add a f => \lam b => (b = a) || f b
+    | isElem a f => f a
+    | setExt  f => ext (\lam a => \let | (fst, snd) => f a \in propExt fst snd)
+    | add-head => byLeft idp
+    | add-tail => \lam i => byRight i
+    | add-univ => \lam i => i
+    | empty-univ => \lam i => i
+  }
 
 -- 3. Докажите, что множество подмножеств является наибольшим инстансом, то есть любой другой вкладывается в него.
 
